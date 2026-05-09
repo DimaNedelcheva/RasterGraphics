@@ -1,21 +1,12 @@
 #pragma once
 #include "Image.hpp"
-#include <iostream>
 #include <fstream>
 #include <vector>
 
-struct RGB {
-	int r = 0;
-	int g = 0;
-	int b = 0;
-};
-
-class PPMImage : public Image {
+class PBMImage : public Image {
 private:
-	int maxValue = 255;
-	std::vector<std::vector<RGB>> pixels;
+	std::vector<std::vector<int>> pixels;
 
-	bool isGrayscale() const;
 public:
 	void load(std::istream& in) override;
 	void save(std::ostream& out) const override;
@@ -28,4 +19,3 @@ public:
 
 	Image* clone() const override;
 };
-

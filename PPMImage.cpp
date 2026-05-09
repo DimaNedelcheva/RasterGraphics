@@ -3,6 +3,19 @@
 #include <fstream>
 #include <vector>
 
+bool PPMImage::isGrayscale() const {
+	for (auto& row : pixels) {
+		for (auto& p : row) {
+			if (p.r != p.g || p.g != p.b)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 void PPMImage::load(std::istream& in) {
 	std::string magic;
 	in >> magic;
@@ -12,10 +25,8 @@ void PPMImage::load(std::istream& in) {
 
 	pixels.resize(height, std::vector<RGB>(width));
 
-	for (int i = 0; i < height; i++)
-	{
-		for (int j = 0; j < width; j++)
-		{
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
 			in >> pixels[i][j].r
 				>> pixels[i][j].g
 				>> pixels[i][j].b;
@@ -37,6 +48,10 @@ void PPMImage::save(std::ostream& out) const {
 }
 
 void PPMImage::grayscale() {
+	if (isGrayscale()) {
+		return;
+	}
+
 	for (auto& row : pixels) {
 		for (auto& p : row)
 		{

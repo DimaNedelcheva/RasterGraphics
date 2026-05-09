@@ -1,17 +1,20 @@
 #include <iostream>
 #include <fstream>
 #include "PPMImage.hpp"
+#include "PGMImage.hpp"
+#include "PBMImage.hpp"
 
 int main() {
 
-    std::ifstream input("image.ppm");
+    std::ifstream input("image.pbm");
 
     if (!input.is_open()) {
         std::cout << "Cannot open file!\n";
         return 1;
     }
 
-    PPMImage img;
+    PBMImage img;
+
 
     img.load(input);
 
@@ -25,11 +28,11 @@ int main() {
 
     img.negative();
 
-    // img.rotateLeft();
+    img.rotateLeft();
 
     // img.rotateRight();
 
-    std::ofstream output("result.ppm");
+    std::ofstream output("result.pbm");
 
     if (!output.is_open()) {
         std::cout << "Cannot create output file!\n";

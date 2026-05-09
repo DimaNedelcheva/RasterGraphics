@@ -1,14 +1,13 @@
-#include "PGMImage.hpp"
+#include "PBMImage.hpp"
 #include <fstream>
 #include <vector>
 #include <iostream>
 
-void PGMImage::load(std::istream& in) {
+void PBMImage::load(std::istream& in) {
 	std::string magic;
 	in >> magic;
 
 	in >> width >> height;
-	in >> maxValue;
 
 	pixels.resize(height, std::vector<int>(width));
 
@@ -21,10 +20,9 @@ void PGMImage::load(std::istream& in) {
 	}
 }
 
-void PGMImage::save(std::ostream& out) const {
+void PBMImage::save(std::ostream& out) const {
 	out << "P2\n";
 	out << width << " " << height << "\n";
-	out << maxValue << "\n";
 
 	for (const auto& row : pixels) {
 		for (const auto& p : row) {
@@ -35,35 +33,23 @@ void PGMImage::save(std::ostream& out) const {
 	}
 }
 
-void PGMImage::grayscale() {
+void PBMImage::grayscale() {
 	return;
 }
 
-void PGMImage::monochrome() {
+void PBMImage::monochrome() {
+	return;
+}
+
+void PBMImage::negative() {
 	for (auto& row : pixels) {
 		for (auto& p : row) {
-			if (p > 7)
-			{
-				p = 15;
-			}
-
-			else
-			{
-				p = 0;
-			}
+			p = 1 - p;
 		}
 	}
 }
 
-void PGMImage::negative() {
-	for (auto& row : pixels) {
-		for (auto& p : row) {
-			p = maxValue - p;
-		}
-	}
-}
-
-void PGMImage::rotateLeft() {
+void PBMImage::rotateLeft() {
 	std::vector<std::vector<int>> result(width, std::vector<int>(height));
 
 	for (int i = 0; i < height; i++) {
@@ -76,7 +62,7 @@ void PGMImage::rotateLeft() {
 	std::swap(width, height);
 }
 
-void PGMImage::rotateRight() {
+void PBMImage::rotateRight() {
 	std::vector<std::vector<int>> result(width, std::vector<int>(height));
 
 	for (int i = 0; i < height; i++)
@@ -91,6 +77,6 @@ void PGMImage::rotateRight() {
 	std::swap(width, height);
 }
 
-Image* PGMImage::clone() const {
-	return new PGMImage(*this);
+Image* PBMImage::clone() const {
+	return new PBMImage(*this);
 }

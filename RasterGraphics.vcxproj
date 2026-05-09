@@ -123,14 +123,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="PBMImage.cpp" />
     <ClCompile Include="PGMImage.cpp" />
     <ClCompile Include="PPMImage.cpp" />
     <ClCompile Include="RasterGraphics.cpp" />
+    <ClCompile Include="Session.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Image.hpp" />
+    <ClInclude Include="PBMImage.hpp" />
     <ClInclude Include="PGMImage.hpp" />
     <ClInclude Include="PPMImage.hpp" />
+    <ClInclude Include="Session.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
