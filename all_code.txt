@@ -1,0 +1,1147 @@
+#include "CommandHandler.h"
+#include "ImageCreator.h"
+#include "Image.h"
+#include <iostream>
+#include <fstream>
+
+void CommandHandler::run() {
+	std::string command;
+
+	while (true) {
+		std::cout << "> ";
+
+		std::cin >> command;
+
+		if (command == "exit") {
+			break;
+		}
+
+		else if (command == "load") {
+
+			std::string fileName;
+
+			Session* session = nullptr;
+			bool hasImages = false;
+
+			while (std::cin >> fileName) {
+
+				if (fileName == "done") {
+					break;
+				}
+
+				Image* image = ImageCreator::createImage(fileName);
+
+				if (!image) {
+					std::cout << "Cannot open file!" << std::endl;
+					continue;
+				}
+
+				std::ifstream in(fileName);
+
+				image->load(in);
+
+				if (!session) {
+					session = new Session(manager.generateID());
+				}
+
+				session->addImage(image, fileName);
+
+				hasImages = true;
+
+				std::cout << "Image \"" << fileName << "\" added" << std::endl;
+			}
+
+			if (!hasImages) {
+				std::cout << "No images loaded!" << std::endl;
+				delete session;
+				continue;
+			}
+
+			manager.addSession(session);
+
+			std::cout << "Session with ID: "
+				<< session->getId()
+				<< " started!"
+				<< std::endl;
+		}
+
+		else if (command == "add") {
+			std::string fileName;
+			std::cin >> fileName;
+
+			Session* current = manager.getCurrentSession();
+
+			if (!current) {
+				std::cout << "No active session!" << std::endl;
+				continue;
+			}
+
+			Image* image = ImageCreator::createImage(fileName);
+
+			if (!image) {
+				std::cout << "Cannot open file!" << std::endl;
+				continue;
+			}
+
+			std::ifstream in(fileName);
+
+			image->load(in);
+
+			current->addImage(image, fileName);
+
+			std::cout << "Image \"" << fileName << "\" added" << std::endl;
+		}
+
+		else if (command == "grayscale") {
+			Session* current = manager.getCurrentSession();
+
+			if (current) {
+				current->addTransform("grayscale");
+				std::cout << "Transformation added" << std::endl;
+			}
+		}
+
+		else if (command == "monochrome") {
+			Session* current = manager.getCurrentSession();
+
+			if (current) {
+				current->addTransform("monochrome");
+				std::cout << "Transformation added" << std::endl;
+			}
+		}
+
+		else if (command == "negative") {
+			Session* current = manager.getCurrentSession();
+
+			if (current) {
+				current->addTransform("negative");
+				std::cout << "Transformation added" << std::endl;
+			}
+		}
+
+		else if (command == "rotate") {
+			std::string direction;
+			std::cin >> direction;
+
+			Session* current = manager.getCurrentSession();
+
+			if (!current) {
+				continue;
+			}
+
+			if (direction == "left") {
+				current->addTransform("rotate left");
+			}
+
+			else if (direction == "right") {
+				current->addTransform("rotate right");
+			}
+
+			std::cout << "Transformation added" << std::endl;
+		}
+
+		else if (command == "undo") {
+			Session* current = manager.getCurrentSession();
+
+			if (current) {
+				current->undo();
+			}
+		}
+
+		else if (command == "save") {
+			Session* current = manager.getCurrentSession();
+
+			if (current) {
+				current->save();
+			}
+		}
+
+		else if (command == "saveas") {
+			std::string newName;
+
+			std::cin >> newName;
+
+			Session* current = manager.getCurrentSession();
+
+
+			if (current) {
+				current->saveAs(newName);
+			}
+		}
+
+		else if (command == "session") {
+			std::string second;
+
+			std::cin >> second;
+
+			if (second == "info") {
+				Session* current = manager.getCurrentSession();
+
+				if (current) {
+					current->info();
+				}
+			}
+		}
+
+		else if (command == "switch") {
+			int id;
+
+			std::cin >> id;
+
+			manager.switchSession(id);
+		}
+
+		else if (command == "collage") {
+			std::string direction;
+			std::string img1;
+			std::string img2;
+			std::string outName;
+
+			std::cin >> direction >> img1 >> img2 >> outName;
+
+			Session* current = manager.getCurrentSession();
+
+			if (!current) {
+				std::cout << "No active session!" << std::endl;
+				continue;
+			}
+
+			Image* first = current->getImageByName(img1);
+			Image* second = current->getImageByName(img2);
+
+			if (!first || !second) {
+				std::cout << "Images not found!" << std::endl;
+				continue;
+			}
+
+			Image* result = nullptr;
+
+			if (direction == "horizontal") {
+				result = first->collageHorizontal(second);
+			}
+
+			else if (direction == "vertical") {
+				result = first->collageVertical(second);
+			}
+
+			if (!result) {
+				std::cout << "Cannot create collage!" << std::endl;
+				continue;
+			}
+
+			current->addImage(result, outName);
+
+			std::cout << "New collage \"" << outName << "\" created" << std::endl;
+		}
+
+		else if (command == "help") {
+			std::cout << "Commands:\n";
+
+			std::cout << "load\n";
+			std::cout << "add\n";
+			std::cout << "grayscale\n";
+			std::cout << "monochrome\n";
+			std::cout << "negative\n";
+			std::cout << "rotate left/right\n";
+			std::cout << "undo\n";
+			std::cout << "save\n";
+			std::cout << "saveas\n";
+			std::cout << "switch\n";
+			std::cout << "session info\n";
+			std::cout << "collage\n";
+			std::cout << "exit\n";
+		}
+
+		else {
+			std::cout << "Unknown command" << std::endl;
+		}
+	}
+
+}
+#pragma once
+#include "SessionManager.h"
+
+class CommandHandler {
+private:
+	SessionManager manager;
+
+public:
+	void run();
+};
+#pragma once
+#include <iostream>
+#include <fstream>
+#include <string>
+
+class Image {
+protected:
+	int width;
+	int height;
+
+public:
+	virtual ~Image() = default;
+
+	virtual void load(std::istream&) = 0;
+	virtual void save(std::ostream&) const = 0;
+
+	virtual void grayscale() = 0;
+	virtual void monochrome() = 0;
+	virtual void negative() = 0;
+	virtual void rotateLeft() = 0;
+	virtual void rotateRight() = 0;
+	
+	virtual Image* collageHorizontal(const Image* other) const = 0;
+	virtual Image* collageVertical(const Image* other) const = 0;
+
+	virtual Image* clone() const = 0;
+
+	int getWidth() const {
+		return width;
+	}
+
+	int getHeight() const {
+		return height;
+	}
+};
+#include "ImageCreator.h"
+#include "PPMImage.h"
+#include "PGMImage.h"
+#include "PBMImage.h"
+
+#include <fstream>
+
+Image* ImageCreator::createImage(const std::string& fileName) {
+	std::ifstream in(fileName);
+
+	if (!in.is_open()) {
+		return nullptr;
+	}
+
+	std::string magic;
+
+	in >> magic;
+
+	if (magic == "P3") {
+		return new PPMImage();
+	}
+
+	else if (magic == "P2") {
+		return new PGMImage();
+	}
+
+	else if (magic == "P1") {
+		return new PBMImage();
+	}
+
+	return nullptr;
+}
+#pragma once
+
+#include <string>
+#include "Image.h"
+
+class ImageCreator {
+public:
+	static Image* createImage(const std::string& fileName);
+};
+#include "PBMImage.h"
+#include <fstream>
+#include <vector>
+#include <iostream>
+
+void PBMImage::load(std::istream& in) {
+	std::string magic;
+	in >> magic;
+
+	in >> width >> height;
+
+	pixels = Vector<Vector<int>>();
+	pixels.resize(height, Vector<int>(width, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			in >> pixels[i][j];
+		}
+	}
+}
+
+void PBMImage::save(std::ostream& out) const {
+	out << "P1\n";
+	out << width << " " << height << "\n";
+
+	for (const Vector<int>& row : pixels) {
+		for (const int& p : row) {
+			out << p << " ";
+		}
+
+		out << '\n';
+	}
+}
+
+void PBMImage::grayscale() {
+	return;
+}
+
+void PBMImage::monochrome() {
+	return;
+}
+
+void PBMImage::negative() {
+	for (Vector<int>& row : pixels) {
+		for (int& p : row) {
+			p = 1 - p;
+		}
+	}
+}
+
+void PBMImage::rotateLeft() {
+	Vector<Vector<int>> result;
+
+	result.resize(width, Vector<int>(height, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result[width - j - 1][i] = pixels[i][j];
+		}
+	}
+
+	pixels = result;
+	std::swap(width, height);
+}
+
+void PBMImage::rotateRight() {
+	Vector<Vector<int>> result;
+
+	result.resize(width, Vector<int>(height, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result[j][height - i - 1] = pixels[i][j];
+		}
+	}
+
+	pixels = result;
+	std::swap(width, height);
+}
+
+Image* PBMImage::collageHorizontal(const Image* other) const {
+	const PBMImage* rhs = dynamic_cast<const PBMImage*>(other);
+
+	if (!rhs) {
+		return nullptr;
+	}
+
+	if (height != rhs->height) {
+		return nullptr;
+	}
+
+	PBMImage* result = new PBMImage;
+
+	result->width = width + rhs->width;
+	result->height = height;
+
+	result->pixels.resize(result->height, Vector<int>(result->width, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i][j] = pixels[i][j];
+		}
+
+		for (int j = 0; j < rhs->width; j++) {
+			result->pixels[i][j + width] = rhs->pixels[i][j];
+		}
+	}
+
+	return result;
+}
+
+
+Image* PBMImage::collageVertical(const Image* other) const {
+	const PBMImage* rhs = dynamic_cast<const PBMImage*>(other);
+
+	if (!rhs) {
+		return nullptr;
+	}
+
+	if (width != rhs->width) {
+		return nullptr;
+	}
+
+	PBMImage* result = new PBMImage;
+
+	result->width = width;
+	result->height = height + rhs->height;
+
+	result->pixels.resize(result->height, Vector<int>(width, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i][j] = pixels[i][j];
+		}
+	}
+
+	for (int i = 0; i < rhs->height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i + height][j] = rhs->pixels[i][j];
+		}
+	}
+
+	return result;
+}
+
+Image* PBMImage::clone() const {
+	return new PBMImage(*this);
+}
+#pragma once
+#include "Image.h"
+#include "Vector.hpp"
+#include <fstream>
+#include <vector>
+
+
+class PBMImage : public Image {
+private:
+	Vector<Vector<int>> pixels;
+
+public:
+	void load(std::istream& in) override;
+	void save(std::ostream& out) const override;
+
+	void grayscale() override;
+	void monochrome() override;
+	void negative() override;
+	void rotateLeft() override;
+	void rotateRight() override;
+	Image* collageHorizontal(const Image* other) const override;
+	Image* collageVertical(const Image* other) const override;
+
+	Image* clone() const override;
+};
+#include "PGMImage.h"
+#include <fstream>
+#include <iostream>
+
+void PGMImage::load(std::istream& in) {
+	std::string magic;
+	in >> magic;
+
+	in >> width >> height;
+	in >> maxValue;
+
+	pixels = Vector<Vector<int>>();
+	pixels.clear();
+	pixels.resize(height, Vector<int>(width, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			in >> pixels[i][j];
+		}
+	}
+}
+
+void PGMImage::save(std::ostream& out) const {
+	out << "P2\n";
+	out << width << " " << height << "\n";
+	out << maxValue << "\n";
+
+	for (const Vector<int>& row : pixels) {
+		for (const int& p : row) {
+			out << p << " ";
+		}
+
+		out << '\n';
+	}
+}
+
+void PGMImage::grayscale() {
+	return;
+}
+
+void PGMImage::monochrome() {
+	for (Vector<int>& row : pixels) {
+		for (int& p : row) {
+			if (p > 7)
+			{
+				p = 15;
+			}
+
+			else
+			{
+				p = 0;
+			}
+		}
+	}
+}
+
+void PGMImage::negative() {
+	for (Vector<int>& row : pixels) {
+		for (int& p : row) {
+			p = maxValue - p;
+		}
+	}
+}
+
+void PGMImage::rotateLeft() {
+	Vector<Vector<int>> result;
+
+	result.resize(width, Vector<int>(height, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result[width - j - 1][i] = pixels[i][j];
+		}
+	}
+
+	pixels = result;
+	std::swap(width, height);
+}
+
+void PGMImage::rotateRight() {
+	Vector<Vector<int>> result;
+
+	result.resize(width, Vector<int>(height, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result[j][height - i - 1] = pixels[i][j];
+		}
+	}
+
+	pixels = result;
+	std::swap(width, height);
+}
+
+Image* PGMImage::collageHorizontal(const Image* other) const {
+	const PGMImage* rhs = dynamic_cast<const PGMImage*>(other);
+
+	if (!rhs) {
+		return nullptr;
+	}
+
+	if (height != rhs->height) {
+		return nullptr;
+	}
+
+	PGMImage* result = new PGMImage;
+
+	result->width = width + rhs->width;
+	result->height = height;
+	result->maxValue = maxValue;
+
+	result->pixels.resize(result->height, Vector<int>(result->width, 0));
+
+	for (int i = 0; i < height; i++) {
+
+		for (int j = 0; j < width; j++) {
+			result->pixels[i][j] = pixels[i][j];
+		}
+
+		for (int j = 0; j < rhs->width; j++) {
+			result->pixels[i][j + width] = rhs->pixels[i][j];
+		}
+	}
+
+	return result;
+}
+
+Image* PGMImage::collageVertical(const Image* other) const {
+	const PGMImage* rhs = dynamic_cast<const PGMImage*>(other);
+
+	if (!rhs) {
+		return nullptr;
+	}
+
+	if (width != rhs->width) {
+		return nullptr;
+	}
+
+	PGMImage* result = new PGMImage;
+
+	result->width = width;
+	result->height = height + rhs->height;
+	result->maxValue = maxValue;
+
+	result->pixels.resize(result->height, Vector<int>(width, 0));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i][j] = pixels[i][j];
+		}
+	}
+
+	for (int i = 0; i < rhs->height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i + height][j] = rhs->pixels[i][j];
+		}
+	}
+
+	return result;
+}
+
+Image* PGMImage::clone() const {
+	return new PGMImage(*this);
+}
+#pragma once
+#include "Vector.hpp"
+#include "Image.h"
+#include <vector>
+
+class PGMImage : public Image {
+private:
+	int maxValue = 15;
+	Vector<Vector<int>> pixels;
+
+public:
+	void load(std::istream& in) override;
+	void save(std::ostream& out) const override;
+
+	void grayscale() override;
+	void monochrome() override;
+	void negative() override;
+	void rotateLeft() override;
+	void rotateRight() override;
+	Image* collageHorizontal(const Image* other) const override;
+	Image* collageVertical(const Image* other) const override;
+	Image* clone() const override;
+
+};
+
+#include "PPMImage.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+bool PPMImage::isGrayscale() const {
+	for (const Vector<RGB>& row : pixels) {
+		for (const RGB& p : row) {
+			if (p.r != p.g || p.g != p.b) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+void PPMImage::load(std::istream& in) {
+	std::string magic;
+	in >> magic;
+
+	in >> width >> height;
+	in >> maxValue;
+
+	pixels = Vector<Vector<RGB>>();
+	pixels.clear();
+	pixels.resize(height, Vector<RGB>(width, RGB()));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			in >> pixels[i][j].r
+				>> pixels[i][j].g
+				>> pixels[i][j].b;
+		}
+	}
+}
+
+void PPMImage::save(std::ostream& out) const {
+	out << "P3\n";
+	out << width << " " << height << "\n";
+	out << maxValue << "\n";
+
+	for (const Vector<RGB>& row : pixels) {
+		for (const RGB& p : row) {
+			out << p.r << " " << p.g << " " << p.b << " ";
+		}
+	}
+	out << "\n";
+}
+
+void PPMImage::grayscale() {
+	if (isGrayscale()) {
+		return;
+	}
+
+	for (Vector<RGB>& row : pixels) {
+		for (RGB& p : row)
+		{
+			int gray = static_cast<int>(0.299 * p.r + 0.587 * p.g + 0.114 * p.b);
+			
+			p.r = p.g = p.b = gray;
+		}
+	}
+}
+
+void PPMImage::monochrome() {
+	for (Vector<RGB>& row : pixels) {
+		for (RGB& p : row) {
+			int gray = static_cast<int>(0.299 * p.r + 0.587 * p.g + 0.114 * p.b);
+
+			if (gray > 127)
+			{
+				p.r = p.g = p.b = 255;
+			}
+
+			else
+			{
+				p.r = p.g = p.b = 0;
+			}
+		}
+	}
+}
+
+void PPMImage::negative() {
+	for (Vector<RGB>& row : pixels) {
+		for (RGB& p : row)
+		{
+			p.r = maxValue - p.r;
+			p.g = maxValue - p.g;
+			p.b = maxValue - p.b;
+		}
+	}
+}
+
+void PPMImage::rotateLeft() {
+	Vector<Vector<RGB>> result;
+	result.resize(width, Vector<RGB>(height, RGB()));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result[width - j - 1][i] = pixels[i][j];
+		}
+	}
+		
+	pixels = result;
+	std::swap(width, height);
+}
+
+void PPMImage::rotateRight() {
+	Vector<Vector<RGB>> result;
+	result.resize(width, Vector<RGB>(height, RGB()));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result[j][height - i - 1] = pixels[i][j];
+		}
+	}
+
+	pixels = result;
+	std::swap(width, height);
+}
+
+Image* PPMImage::collageHorizontal(const Image* other) const {
+	const PPMImage* rhs = dynamic_cast<const PPMImage*>(other);
+
+	if (!rhs) {
+		return nullptr;
+	}
+
+	if (height != rhs->height) {
+		return nullptr;
+	}
+
+	PPMImage* result = new PPMImage;
+
+	result->width = width + rhs->width;
+	result->height = height;
+
+	result->pixels.resize(result->height, Vector<RGB>(result->width, RGB()));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i][j] = pixels[i][j];
+		}
+
+		for (int j = 0; j < rhs->width; j++) {
+			result->pixels[i][j + width] = rhs->pixels[i][j];
+		}
+	}
+
+	return result;
+}
+
+Image* PPMImage::collageVertical(const Image* other) const {
+	const PPMImage* rhs = dynamic_cast<const PPMImage*>(other);
+
+	if (!rhs) {
+		return nullptr;
+	}
+
+	if (width != rhs->width) {
+		return nullptr;
+	}
+
+	PPMImage* result = new PPMImage;
+
+	result->width = width;
+	result->height = height + rhs->height;
+
+	result->pixels.resize(result->height, Vector<RGB>(result->width, RGB()));
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i][j] = pixels[i][j];
+		}
+	}
+
+	for (int i = 0; i < rhs->height; i++) {
+		for (int j = 0; j < width; j++) {
+			result->pixels[i + height][j] = rhs->pixels[i][j];
+		}
+	}
+
+	return result;
+}
+
+Image* PPMImage::clone() const {
+	return new PPMImage(*this);
+}
+#pragma once
+#include "Image.h"
+#include "Vector.hpp"
+#include <iostream>
+#include <fstream>
+
+struct RGB {
+	int r = 0;
+	int g = 0;
+	int b = 0;
+};
+
+class PPMImage : public Image {
+private:
+	int maxValue = 255;
+	Vector<Vector<RGB>> pixels;
+
+	bool isGrayscale() const;
+public:
+	void load(std::istream& in) override;
+	void save(std::ostream& out) const override;
+
+	void grayscale() override;
+	void monochrome() override;
+	void negative() override;
+	void rotateLeft() override;
+	void rotateRight() override;
+	Image* collageHorizontal(const Image* other) const override;
+	Image* collageVertical(const Image* other) const override;
+
+	Image* clone() const override;
+};
+
+#include <iostream>
+#include <fstream>
+#include "CommandHandler.h"
+
+int main() {
+	CommandHandler app;
+	app.run();
+
+	return 0;
+}
+#include "Session.h"
+#include "Image.h"
+#include <fstream>
+#include <iostream>
+
+Session::Session(int id) : id(id) {}
+
+Session::~Session() {
+	for (Image* img : images) {
+		delete img;
+	}
+}
+
+int Session::getId() const {
+	return id;
+}
+
+Image* Session::getImageByName(const std::string& name) const {
+	for (size_t i = 0; i < fileNames.size(); i++) {
+		if (fileNames[i] == name) {
+			return images[i];
+		}
+	}
+
+	return nullptr;
+}
+
+void Session::addImage(Image* image, const std::string& filename) {
+	images.push_back(image);
+	fileNames.push_back(filename);
+}
+
+void Session::addTransform(const std::string& transform) {
+	pendingTransforms.push_back(transform);
+}
+
+void Session::undo() {
+	if (!pendingTransforms.empty()) {
+		pendingTransforms.pop_back();
+	}
+}
+
+void Session::applyTransforms(Image* image) {
+	for (const std::string& t : pendingTransforms)
+	{
+		if (t == "grayscale") {
+			image->grayscale();
+		}
+
+		else if (t == "monochrome") {
+			image->monochrome();
+		}
+
+		else if (t == "negative") {
+			image->negative();
+		}
+
+		else if (t == "rotate left") {
+			image->rotateLeft();
+		}
+
+		else if (t == "rotate right") {
+			image->rotateRight();
+		}
+	}
+}
+
+void Session::save() {
+	for (size_t i = 0; i < images.size(); i++) {
+		Image* copy = images[i]->clone();
+
+		applyTransforms(copy);
+
+		std::ofstream out(fileNames[i]);
+
+		if (!out.is_open()) {
+			std::cout << "Cannot save file!\n";
+			delete copy;
+			continue;
+		}
+
+		copy->save(out);
+
+		delete copy;
+	}
+}
+
+void Session::saveAs(const std::string& newFileName) {
+	if (images.empty()) return;
+
+	Image* copy = images[0]->clone();
+
+	applyTransforms(copy);
+
+	std::ofstream out(newFileName);
+
+	if (!out.is_open()) {
+		std::cout << "Cannot save file!\n";
+		delete copy;
+		return;
+	}
+
+	copy->save(out);
+
+	delete copy;
+}
+
+void Session::info() const {
+	std::cout << "Session ID: " << id << std::endl;
+	std::cout << "Images: " << std::endl;
+
+	for (const auto& name : fileNames) {
+		std::cout << name << std::endl;
+	}
+
+	std::cout << "Pending transformations:\n";
+
+	for (const auto& t : pendingTransforms) {
+		std::cout << t << std::endl;
+	}
+}
+#pragma once
+#include "Vector.hpp"
+#include "Image.h"
+
+class Session {
+private:
+	int id;
+	Vector<Image*> images;
+	Vector<std::string> pendingTransforms;
+	Vector<std::string> fileNames;
+
+	void applyTransforms(Image* image);
+
+public:
+	Session(int id);
+	Session(const Session& other) = delete;
+	Session& operator=(const Session& other) = delete;
+	~Session();
+	int getId() const; 
+
+	Image* getImageByName(const std::string& name) const;
+	void addImage(Image*, const std::string& fileName);
+	void addTransform(const std::string& transform);
+	void undo();
+	void save();
+	void saveAs(const std::string& newFileName);
+	void info() const;
+};
+#include "SessionManager.h"
+#include <iostream>
+
+SessionManager::~SessionManager() {
+	for (Session* s : sessions) {
+		delete s;
+	}
+}
+
+int SessionManager::generateID() {
+	return nextID++;
+}
+
+void SessionManager::addSession(Session* session) {
+	sessions.push_back(session);
+	currentSession = session;
+}
+
+Session* SessionManager::getCurrentSession() const {
+	return currentSession;
+}
+
+void SessionManager::switchSession(int id) {
+	for (Session* s : sessions) {
+		if (s->getId() == id)
+		{
+			currentSession = s;
+
+			std::cout << "You switched to session with ID: " << id << std::endl;
+
+			return;
+		}
+	}
+
+	std::cout << "No such session!\n";
+}
+#pragma once
+#include "Session.h"
+#include <vector>
+
+class SessionManager {
+private:
+	Vector<Session*> sessions;
+	Session* currentSession = nullptr;
+	int nextID = 1;
+
+public:
+	SessionManager() = default;
+	SessionManager(const SessionManager&) = delete;
+	SessionManager& operator=(const SessionManager&) = delete;
+	~SessionManager();
+
+	void addSession(Session* session);
+	Session* getCurrentSession() const;
+	void switchSession(int id);
+	int generateID();
+};
+
